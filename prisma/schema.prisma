@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         String        @default("Member") // "Admin" | "Member"
+  tier         String        @default("Basic")  // "Basic" | "Silver" | "Gold"
+  bookings     Booking[]
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Office {
+  id          String     @id @default(cuid())
+  name        String
+  location    String?
+  resources   Resource[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Resource {
+  id         String    @id @default(cuid())
+  type       String    // "Desk" | "Cabin" | "Room"
+  name       String
+  attributes String    // JSON stringified 
+  status     String    @default("Available") // "Available" | "Maintenance"
+  officeId   String?
+  office     Office?   @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  bookings   Booking[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  userId       String
+  resourceId   String
+  date         String        // YYYY-MM-DD
+  startTime    String        // HH:mm
+  endTime      String        // HH:mm
+  status       String        @default("Confirmed") // "Confirmed" | "Cancelled"
+  user         User          @relation(fields: [userId], references: [id])
+  resource     Resource      @relation(fields: [resourceId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([resourceId, date, startTime])
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  bookingId String
+  amount    Float
+  status    String   @default("Completed") // "Pending" | "Completed" | "Failed"
+  user      User     @relation(fields: [userId], references: [id])
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
